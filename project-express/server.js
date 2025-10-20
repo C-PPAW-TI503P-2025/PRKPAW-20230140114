@@ -1,12 +1,19 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+
 import bookRouter from "./router/book.js";
+import presensiRouter from "./router/presensi.js"; 
+import reportRouter from "./router/reports.js";    
 
 const app = express();
 const PORT = 3000;
 
-app.use(cors());
-app.use(express.json()); 
+app.use(cors());              
+app.use(helmet());            
+app.use(express.json());      
+app.use(morgan("dev"));      
 
 app.use((req, res, next) => {
   const log = `[${new Date().toISOString()}] ${req.method} ${req.url}`;
@@ -15,6 +22,10 @@ app.use((req, res, next) => {
 });
 
 app.use("/api", bookRouter);
+
+app.use("/api/presensi", presensiRouter);
+
+app.use("/api/reports", reportRouter);
 
 app.use((req, res) => {
   res.status(404).json({ error: "Endpoint tidak ditemukan." });
