@@ -31,7 +31,7 @@ router.get("/books/:id", async (req, res, next) => {
 
 
 
-// [CREATE] Tambah buku baru
+
 router.post("/books", async (req, res, next) => {
   try {
     const { title, author, year } = req.body;
@@ -55,7 +55,7 @@ router.post("/books", async (req, res, next) => {
   }
 });
 
-// [UPDATE] Update data buku berdasarkan ID
+
 router.put("/books/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -78,7 +78,7 @@ router.put("/books/:id", async (req, res, next) => {
   }
 });
 
-// [DELETE] Hapus buku berdasarkan ID
+
 router.delete("/books/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
