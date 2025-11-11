@@ -7,7 +7,9 @@ import db from "./models/index.js";
 
 import bookRouter from "./router/book.js";
 import presensiRouter from "./router/presensi.js"; 
-import reportRouter from "./router/reports.js";    
+import reportRouter from "./router/reports.js";   
+import authRouter from "./router/auth.js";
+
 
 const app = express();
 const PORT = 3000;
@@ -29,6 +31,9 @@ app.use("/api", bookRouter);
 app.use("/api/presensi", presensiRouter);
 
 app.use("/api/reports", reportRouter);
+
+app.use("/api/auth", authRouter);
+
 
 app.use((req, res) => {
   res.status(404).json({ error: "Endpoint tidak ditemukan." });

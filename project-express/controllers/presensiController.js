@@ -1,7 +1,7 @@
-// controllers/presensiController.js
 import db from "../models/index.js";
 const { Presensi } = db;
-import { format } from "date-fns-tz";
+import { format, formatInTimeZone } from "date-fns-tz";
+
 
 const timeZone = "Asia/Jakarta";
 
@@ -135,9 +135,22 @@ export const updatePresensi = async (req, res) => {
     recordToUpdate.nama = nama || recordToUpdate.nama;
     await recordToUpdate.save();
 
+    const timeZone = "Asia/Jakarta";
+    const formattedData = {
+      id: recordToUpdate.id,
+      userId: recordToUpdate.userId,
+      nama: recordToUpdate.nama,
+      checkIn: formatInTimeZone(recordToUpdate.checkIn, timeZone, "yyyy-MM-dd HH:mm:ss"),
+      checkOut: recordToUpdate.checkOut
+        ? formatInTimeZone(recordToUpdate.checkOut, timeZone, "yyyy-MM-dd HH:mm:ss")
+        : null,
+      createdAt: formatInTimeZone(recordToUpdate.createdAt, timeZone, "yyyy-MM-dd HH:mm:ss"),
+      updatedAt: formatInTimeZone(recordToUpdate.updatedAt, timeZone, "yyyy-MM-dd HH:mm:ss"),
+    };
+
     res.json({
       message: "Data presensi berhasil diperbarui.",
-      data: recordToUpdate,
+       data: formattedData,
     });
   } catch (error) {
     res
