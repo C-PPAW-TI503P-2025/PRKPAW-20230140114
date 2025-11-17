@@ -2,7 +2,7 @@ import { Sequelize } from "sequelize";
 import PresensiModel from "./presensi.js";
 import UserModel from "./user.js";
 
-const sequelize = new Sequelize("pratikum_114_db", "root", "Sambeng13", {
+const sequelize = new Sequelize("pratikum_114_db", "root", "123456", {
   host: "127.0.0.1",
   port: 3309,
   dialect: "mysql",
@@ -15,7 +15,8 @@ const sequelize = new Sequelize("pratikum_114_db", "root", "Sambeng13", {
 });
 
 const Presensi = PresensiModel(sequelize, Sequelize.DataTypes);
-const User = UserModel(sequelize, Sequelize.DataTypes);
+const User = UserModel(sequelize, Sequelize.DataTypes); // ← samakan!
 
 const db = { sequelize, Sequelize, Presensi, User };
+
 export default db;

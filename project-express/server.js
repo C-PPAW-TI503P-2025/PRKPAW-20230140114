@@ -45,8 +45,14 @@ app.use((err, req, res, next) => {
 });
 
 db.sequelize.authenticate()
-  .then(() => console.log("Koneksi database berhasil."))
-   .catch(err => console.error("Gagal koneksi ke database:", err));
+  .then(() => {
+    console.log("Koneksi database berhasil.");
+    return db.sequelize.sync();   
+  })
+  .then(() => {
+    console.log("Database sync selesai.");
+  })
+  .catch(err => console.error("Gagal koneksi ke database:", err));
 
 app.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
