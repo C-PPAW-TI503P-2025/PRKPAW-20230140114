@@ -1,15 +1,29 @@
-export const addUserData = (req, res, next) => {
-  req.user = { id: 1, nama: "User Karyawan", role: "user" };
-  next();
-};
+const jwt = require("jsonwebtoken");
+const JWT_SECRET = "INI_ADALAH_KUNCI_RAHASIA_ANDA_YANG_SANGAT_AMAN";
 
-export const checkAdmin = (req, res, next) => {
-  const user = { id: 99, nama: "admin utama", role: "admin" };
-  req.user = user;
 
-  if (user.role !== "admin") {
-    return res.status(403).json({ message: "Akses ditolak: hanya untuk admin." });
+exports.authenticateToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (token == null) {
+    return res.status(401).json({ message: "Akses ditolak. Token tidak disediakan." });
   }
 
-  next();
+  jwt.verify(token, JWT_SECRET, (err, userPayload) => {
+    if (err) {
+      return res.status(403).json({ message: "Token tidak valid atau kedaluwarsa." });
+    }
+
+    req.user = userPayload;
+    next();
+  });
+};
+
+exports.isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === "admin") {
+    next();
+  } else {
+    return res.status(403).json({ message: "Akses ditolak. Hanya untuk admin." });
+  }
 };

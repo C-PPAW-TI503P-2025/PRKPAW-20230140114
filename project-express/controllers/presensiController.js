@@ -1,160 +1,138 @@
 import db from "../models/index.js";
-const { Presensi } = db;
-import { format, formatInTimeZone } from "date-fns-tz";
+import { Op } from "sequelize";
+import { formatInTimeZone } from "date-fns-tz";
 
-
+const { Presensi, User } = db;
 const timeZone = "Asia/Jakarta";
 
+/* ============================
+   CHECK-IN (Ambil userId dari JWT + simpan lokasi)
+=============================== */
 export const CheckIn = async (req, res) => {
   try {
-    const { id: userId, nama: userName } = req.user;
-    const waktuSekarang = new Date();
+    const userId = req.user.id;
+    const { latitude, longitude } = req.body;
 
-    const existingRecord = await Presensi.findOne({
-      where: { userId: userId, checkOut: null },
-    });
+    console.log("📍 CHECK-IN REQUEST:", { latitude, longitude }); // untuk debug di terminal
 
-    if (existingRecord) {
-      return res
-        .status(400)
-        .json({ message: "Anda sudah melakukan check-in hari ini." });
+    // Validasi body wajib ada
+    if (latitude === undefined || longitude === undefined) {
+      return res.status(400).json({ message: "Latitude dan longitude wajib dikirim!" });
     }
 
+    // Cek check-in aktif
+    const existing = await Presensi.findOne({
+      where: { userId, checkOut: null },
+    });
+
+    if (existing) {
+      return res.status(400).json({ message: "Anda masih memiliki check-in aktif, silahkan check-out dulu!" });
+    }
+
+    // Simpan record baru
     const newRecord = await Presensi.create({
-      userId: userId,
-      nama: userName,
-      checkIn: waktuSekarang,
+      userId,
+      checkIn: new Date(),
+      latitude,
+      longitude,
     });
 
-    const formattedData = {
-      userId: newRecord.userId,
-      nama: newRecord.nama,
-      checkIn: format(newRecord.checkIn, "yyyy-MM-dd HH:mm:ssXXX", { timeZone }),
-      checkOut: null,
-    };
-
-    res.status(201).json({
-      message: `Halo ${userName}, check-in berhasil pada pukul ${format(
-        waktuSekarang,
-        "HH:mm:ss",
-        { timeZone }
-      )} WIB`,
-      data: formattedData,
+    return res.status(201).json({
+      message: "Check-In berhasil ✅",
+      data: newRecord,
     });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Terjadi kesalahan pada server", error: error.message });
+
+  } catch (err) {
+    console.error("🔥 CHECK-IN ERROR:", err.message);
+    return res.status(500).json({ message: "Check-In gagal ❌", error: err.message });
   }
 };
 
+/* ============================
+   CHECK-OUT
+=============================== */
 export const CheckOut = async (req, res) => {
   try {
-    const { id: userId, nama: userName } = req.user;
-    const waktuSekarang = new Date();
+    const userId = req.user.id;
 
-    const recordToUpdate = await Presensi.findOne({
-      where: { userId: userId, checkOut: null },
+    const record = await Presensi.findOne({
+      where: { userId, checkOut: null },
     });
 
-    if (!recordToUpdate) {
-      return res.status(404).json({
-        message: "Tidak ditemukan catatan check-in yang aktif untuk Anda.",
-      });
+    if (!record) {
+      return res.status(400).json({ message: "Tidak ada check-in aktif yang bisa di check-out ❌" });
     }
 
-    recordToUpdate.checkOut = waktuSekarang;
-    await recordToUpdate.save();
+    record.checkOut = new Date();
+    await record.save();
 
-    const formattedData = {
-      userId: recordToUpdate.userId,
-      nama: recordToUpdate.nama,
-      checkIn: format(recordToUpdate.checkIn, "yyyy-MM-dd HH:mm:ssXXX", { timeZone }),
-      checkOut: format(recordToUpdate.checkOut, "yyyy-MM-dd HH:mm:ssXXX", { timeZone }),
-    };
-
-    res.json({
-      message: `Selamat jalan ${userName}, check-out berhasil pada pukul ${format(
-        waktuSekarang,
-        "HH:mm:ss",
-        { timeZone }
-      )} WIB`,
-      data: formattedData,
+    return res.status(200).json({
+      message: "Check-Out berhasil ✅",
+      data: record,
     });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Terjadi kesalahan pada server", error: error.message });
+
+  } catch (err) {
+    console.error("🔥 CHECK-OUT ERROR:", err.message);
+    return res.status(500).json({ message: "Check-Out gagal ❌", error: err.message });
   }
 };
 
+/* ============================
+   DELETE PRESENSI (Admin Only)
+=============================== */
 export const DeletePresensi = async (req, res) => {
   try {
-    const { id: userId } = req.user;
-    const presensiId = req.params.id;
-    const recordToDelete = await Presensi.findByPk(presensiId);
+    const id = req.params.id;
 
-    if (!recordToDelete) {
-      return res
-        .status(404)
-        .json({ message: "Catatan presensi tidak ditemukan." });
+    const record = await Presensi.findByPk(id);
+
+    if (!record) {
+      return res.status(404).json({ message: "Data presensi tidak ditemukan ❌" });
     }
-    if (recordToDelete.userId !== userId) {
-      return res
-        .status(403)
-        .json({ message: "Akses ditolak: Anda bukan pemilik catatan ini." });
-    }
-    await recordToDelete.destroy();
-    res.status(204).send();
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Terjadi kesalahan pada server", error: error.message });
+
+    await record.destroy();
+    return res.status(200).json({ message: `Data presensi ID ${id} berhasil dihapus ✅` });
+
+  } catch (err) {
+    console.error("🔥 DELETE ERROR:", err.message);
+    return res.status(500).json({ message: "Delete presensi gagal ❌", error: err.message });
   }
 };
 
-export const updatePresensi = async (req, res) => {
+/* ============================
+   DAILY REPORT (Admin + filter nama)
+=============================== */
+export const GetDailyReports = async (req, res) => {
   try {
-    const presensiId = req.params.id;
-    const { checkIn, checkOut, nama } = req.body;
-    if (checkIn === undefined && checkOut === undefined && nama === undefined) {
-      return res.status(400).json({
-        message:
-          "Request body tidak berisi data yang valid untuk diupdate (checkIn, checkOut, atau nama).",
-      });
-    }
-    const recordToUpdate = await Presensi.findByPk(presensiId);
-    if (!recordToUpdate) {
-      return res
-        .status(404)
-        .json({ message: "Catatan presensi tidak ditemukan." });
-    }
+    const { nama } = req.query;
 
-    recordToUpdate.checkIn = checkIn || recordToUpdate.checkIn;
-    recordToUpdate.checkOut = checkOut || recordToUpdate.checkOut;
-    recordToUpdate.nama = nama || recordToUpdate.nama;
-    await recordToUpdate.save();
+    const today = formatInTimeZone(new Date(), timeZone, "yyyy-MM-dd");
+    const start = new Date(today + "T00:00:00+07:00");
+    const end = new Date(today + "T23:59:59+07:00");
 
-    const timeZone = "Asia/Jakarta";
-    const formattedData = {
-      id: recordToUpdate.id,
-      userId: recordToUpdate.userId,
-      nama: recordToUpdate.nama,
-      checkIn: formatInTimeZone(recordToUpdate.checkIn, timeZone, "yyyy-MM-dd HH:mm:ss"),
-      checkOut: recordToUpdate.checkOut
-        ? formatInTimeZone(recordToUpdate.checkOut, timeZone, "yyyy-MM-dd HH:mm:ss")
-        : null,
-      createdAt: formatInTimeZone(recordToUpdate.createdAt, timeZone, "yyyy-MM-dd HH:mm:ss"),
-      updatedAt: formatInTimeZone(recordToUpdate.updatedAt, timeZone, "yyyy-MM-dd HH:mm:ss"),
-    };
-
-    res.json({
-      message: "Data presensi berhasil diperbarui.",
-       data: formattedData,
+    const reports = await Presensi.findAll({
+      where: {
+        checkIn: { [Op.between]: [start, end] }
+      },
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: ["nama", "email"],
+          where: nama ? { nama: { [Op.like]: `%${nama}%` } } : undefined,
+        }
+      ],
+      order: [["checkIn", "ASC"]]
     });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Terjadi kesalahan pada server", error: error.message });
+
+    return res.status(200).json({
+      date: today,
+      total: reports.length,
+      data: reports,
+    });
+
+  } catch (err) {
+    console.error("🔥 REPORT ERROR:", err.message);
+    return res.status(500).json({ message: "Gagal memuat laporan ❌", error: err.message });
   }
 };

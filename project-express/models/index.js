@@ -14,8 +14,13 @@ const sequelize = new Sequelize("pratikum_114_db", "root", "123456", {
   },
 });
 
+// INIT MODELS
 const Presensi = PresensiModel(sequelize, Sequelize.DataTypes);
-const User = UserModel(sequelize, Sequelize.DataTypes); // ← samakan!
+const User = UserModel(sequelize, Sequelize.DataTypes);
+
+// REGISTER RELATION
+User.associate({ Presensi });
+Presensi.associate({ User });
 
 const db = { sequelize, Sequelize, Presensi, User };
 

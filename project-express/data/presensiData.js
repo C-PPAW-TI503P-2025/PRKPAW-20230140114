@@ -6,4 +6,3 @@ export const presensiData = [
     checkOut: new Date("2025-11-04T17:00:00")
   }
 ];
-

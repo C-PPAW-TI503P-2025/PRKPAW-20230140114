@@ -2,12 +2,12 @@ import db from "../models/index.js";
 import { Op } from "sequelize";
 import { formatInTimeZone } from "date-fns-tz";
 
-const { Presensi } = db;
+const { Presensi, User } = db;
 const timeZone = "Asia/Jakarta";
 
 export const getDailyReport = async (req, res) => {
   try {
-    const { nama } = req.query; 
+    const { nama } = req.query;
 
     const today = formatInTimeZone(new Date(), timeZone, "yyyy-MM-dd");
 
@@ -20,12 +20,24 @@ export const getDailyReport = async (req, res) => {
       },
     };
 
-    if (nama) {
-      whereClause.nama = { [Op.like]: `%${nama}%` };
-    }
+    const includeClause = [
+      {
+        model: User,
+        as: "user",
+        attributes: ["nama"],
+        where: nama
+          ? {
+              nama: {
+                [Op.like]: `%${nama}%`,
+              },
+            }
+          : undefined,
+      },
+    ];
 
     const records = await Presensi.findAll({
       where: whereClause,
+      include: includeClause,
       order: [["checkIn", "ASC"]],
     });
 

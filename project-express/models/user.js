@@ -3,7 +3,13 @@ import { DataTypes, Model } from "sequelize";
 export default (sequelize) => {
   class User extends Model {
     static associate(models) {
-      
+      // Relasi One-to-Many: 1 User → Banyak Presensi
+      User.hasMany(models.Presensi, { 
+        foreignKey: "userId",
+        as: "presensi",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      });
     }
   }
 
