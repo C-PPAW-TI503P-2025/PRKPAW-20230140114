@@ -34,6 +34,13 @@ export default (sequelize) => {
         type: DataTypes.DECIMAL(11, 8),
         allowNull: false,
       },
+
+      // ✅ FIELD YANG HILANG (INI WAJIB DITAMBAH)
+      buktiFoto: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
       createdAt: {
         type: DataTypes.DATE,
         allowNull: false,
@@ -48,7 +55,7 @@ export default (sequelize) => {
     {
       sequelize,
       modelName: "Presensi",
-      tableName: "presensis", // biar match sama database MySQL kamu
+      tableName: "presensis",
       timestamps: true,
     }
   );

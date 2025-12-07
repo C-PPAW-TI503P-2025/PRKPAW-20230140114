@@ -1,117 +1,119 @@
-function ReportPage() {
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+
+export default function ReportPage() {
   const [reports, setReports] = useState([]);
   const [error, setError] = useState(null);
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedImage, setSelectedImage] = useState(null); // Modal foto fullscreen
+  const navigate = useNavigate();
 
+  // Fetch laporan
   const fetchReports = async (query) => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/login");
-      return;
-    }
+    if (!token) return navigate("/login");
 
     try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-
-      
+      const res = await axios.get(
+        `http://localhost:3000/api/reports/daily?nama=${query}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setReports(res.data.data); // Data presensi
       setError(null);
     } catch (err) {
-      
+      setError("Gagal memuat data");
     }
   };
 
   useEffect(() => {
     fetchReports("");
-  }, [navigate]);
+  }, []);
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     fetchReports(searchTerm);
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">
-        Laporan Presensi Harian
-      </h1>
+    <div className="p-4">
+      <h2 className="text-xl font-bold mb-4">Laporan Presensi Harian</h2>
 
-      <form onSubmit={handleSearchSubmit} className="mb-6 flex space-x-2">
+      {/* FORM SEARCH */}
+      <form onSubmit={handleSearchSubmit} className="flex gap-2 mb-4">
         <input
           type="text"
-          placeholder="Cari berdasarkan nama..."
+          placeholder="Cari nama"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          className="border px-2 py-1 rounded"
         />
-        <button
-          type="submit"
-          className="py-2 px-4 bg-blue-600 text-white font-semibold rounded-md shadow-sm hover:bg-blue-700"
-        >
+        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
           Cari
         </button>
       </form>
 
-      {error && (
-        <p className="text-red-600 bg-red-100 p-4 rounded-md mb-4">{error}</p>
-      )}
+      {error && <p className="text-red-600 mb-2">{error}</p>}
 
-      {!error && (
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nama
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Check-In
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Check-Out
-                </th>
+      {/* TABEL LAPORAN */}
+      <table className="border-collapse border w-full">
+        <thead>
+          <tr className="bg-gray-200">
+            <th className="border px-2 py-1">Nama</th>
+            <th className="border px-2 py-1">Check-In</th>
+            <th className="border px-2 py-1">Check-Out</th>
+            <th className="border px-2 py-1">Bukti Foto</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {reports.length > 0 ? (
+            reports.map((p) => (
+              <tr key={p.id}>
+                <td className="border px-2 py-1">{p.user?.nama || "N/A"}</td>
+                <td className="border px-2 py-1">
+                  {new Date(p.checkIn).toLocaleString("id-ID")}
+                </td>
+                <td className="border px-2 py-1">
+                  {p.checkOut ? new Date(p.checkOut).toLocaleString("id-ID") : "Belum Check-Out"}
+                </td>
+                <td className="border px-2 py-1 text-center">
+                  {p.buktiFoto ? (
+                    <img
+                      src={`http://localhost:3000${p.buktiFoto}`} // ✅ Perbaikan: hapus /uploads/ tambahan
+                      alt="bukti"
+                      className="w-14 h-14 object-cover rounded cursor-pointer hover:opacity-80 border"
+                      onClick={() => setSelectedImage(`http://localhost:3000${p.buktiFoto}`)}
+                    />
+                  ) : (
+                    "Tidak ada foto"
+                  )}
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {reports.length > 0 ? (
-                reports.map((presensi) => (
-                  <tr key={presensi.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {presensi.user ? presensi.user.nama : "N/A"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(presensi.checkIn).toLocaleString("id-ID", {
-                        timeZone: "Asia/Jakarta",
-                      })}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {presensi.checkOut
-                        ? new Date(presensi.checkOut).toLocaleString("id-ID", {
-                            timeZone: "Asia/Jakarta",
-                          })
-                        : "Belum Check-Out"}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan="3"
-                    className="px-6 py-4 text-center text-gray-500"
-                  >
-                    Tidak ada data yang ditemukan.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+            ))
+          ) : (
+            <tr>
+              <td className="border px-2 py-1 text-center" colSpan="4">
+                Tidak ada data ditemukan
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      {/* MODAL FOTO FULLSCREEN */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50"
+          onClick={() => setSelectedImage(null)}
+        >
+          <img
+            src={selectedImage}
+            alt="Preview"
+            className="max-w-full max-h-full rounded shadow-lg"
+          />
         </div>
       )}
     </div>
   );
 }
-
-export default ReportPage;
