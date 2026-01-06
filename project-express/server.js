@@ -11,6 +11,7 @@ import bookRouter from "./router/book.js";
 import presensiRouter from "./router/presensi.js";
 import reportRouter from "./router/reports.js";
 import authRouter from "./router/auth.js";
+import iotRouter from "./router/iot.js"; // <-- Router IoT baru
 
 const app = express();
 const PORT = 3000;
@@ -38,7 +39,6 @@ app.use(
 
 // ========================
 // STATIC FOLDER UPLOADS
-// (WAJIB supaya foto presensi tampil)
 // ========================
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -49,6 +49,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/presensi", presensiRouter);
 app.use("/api/reports", reportRouter);
 app.use("/api/book", bookRouter);
+app.use("/api/iot", iotRouter); // <-- IoT endpoint aktif
 
 // ========================
 // 404 NOT FOUND HANDLER
